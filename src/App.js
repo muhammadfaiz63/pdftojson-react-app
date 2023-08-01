@@ -8,7 +8,7 @@ export default function App() {
   const [rows, setRows] = useState([])
   const [previewFile, setPreviewFile] = useState("")
   const [loadingUpload,setLoadingUpload] = useState(false)
-  const url = 'http://localhost:1111/'
+  const url = 'https://apiocr.teknologi40.com/'
 
   const handleUpload = async (e) => {
     setLoadingUpload(true)
