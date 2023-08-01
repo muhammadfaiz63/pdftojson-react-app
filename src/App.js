@@ -39,9 +39,6 @@ export default function App() {
     });
     setRows(updatedRows);
   };
-  
-  // useEffect(() => {
-  // }, [])
 
   return (
     <>
