@@ -1,208 +1,118 @@
 import React, { useEffect, useRef, useState } from 'react'
 import './App.css'
-import Box from '@mui/material/Box'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Typography from '@mui/material/Typography'
-import moment from 'moment'
-import { CSVLink } from 'react-csv'
-import { Button } from '@mui/material'
+import { Button,Box, Grid, CircularProgress, Backdrop, Typography, Divider, TextField } from '@mui/material'
+import axios from 'axios'
 
 export default function App() {
   const uploadedDoc = useRef(null)
-  const data = [
-    {
-      nim: 2020230044,
-      name: 'Khoirul Mustaan',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230018,
-      name: 'Muhammad Respati Abimanyu Putro',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230065,
-      name: 'Muhammad Faiz',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230100,
-      name: 'Ahmad Hussein Al Fajri',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230059,
-      name: 'Muhammad Hatta Alfaritzy',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230003,
-      name: 'Dhafa Syarif C.K',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230043,
-      name: 'Aclis Setyo Prihananto',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230074,
-      name: 'Josi gunawan',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230013,
-      name: 'Maisyarah Salsabila',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-    {
-      nim: 2020230016,
-      name: 'Dinda Nurul',
-      major: 'Teknologi Informasi',
-      university: 'Universitas Darma Persada ',
-    },
-  ]
-
   const [rows, setRows] = useState([])
+  const [previewFile, setPreviewFile] = useState("")
+  const [loadingUpload,setLoadingUpload] = useState(false)
+  const url = 'http://localhost:1111/'
 
-  let headers = [
-    { label: 'Nama', key: 'name' },
-    { label: 'Nim', key: 'nim' },
-    { label: 'Jurusan', key: 'major' },
-    { label: 'Universitas', key: 'university' },
-  ]
+  const handleUpload = async (e) => {
+    setLoadingUpload(true)
+      let reader = new FileReader()
+      let file = e.target.files[0]
+      // setDocumentFile(file)
+      reader.readAsDataURL(file)
 
-  const handleImportCSV = (value) => {
-    const reader = new FileReader()
-
-    reader.onload = function (e) {
-      const text = e.target.result
-      processCSV(text)
-    }
-
-    reader.readAsText(value)
+      const formData = new FormData()
+      formData.append('document', file)
+      axios.post(`${url}pdf-to-img`, formData).then(async res=>{
+        if(res.data.image.length > 0) {
+          setPreviewFile(res.data?.pdf)
+          axios.post(`${url}ocr`, {msg: res.data.image}).then(async response=>{
+            setRows(response.data)
+            setLoadingUpload(false)
+          }).catch(err=>alert(err))
+        }
+      }).catch(err => alert(err));
   }
 
-  function renameObject(oldObj, newObj) {
-    return oldObj.map((item, index) => {
-      item = newObj[index]
-      return item
-    })
-  }
-
-  const processCSV = async (str, delim = ';') => {
-    const headers = str.slice(0, str.indexOf('\n')).split(delim)
-    const rows = str.slice(str.indexOf('\n') + 1).split('\n')
-    const newHeaders = ['nim', 'name', 'major', 'university']
-    const resultHeaders = await renameObject(headers, newHeaders)
-    const newArray = rows.map((row) => {
-      const values = row.split(delim)
-      const eachObject = resultHeaders.reduce((obj, header, i) => {
-        obj[header] = values[i].replace(/^"(.*)"$/, '$1')
-        return obj
-      }, {})
-      return eachObject
-    })
-    setRows(newArray)
-  }
-
-  console.log('new rows', rows)
-
-  useEffect(() => {
-    setRows(data)
-  }, [])
+  const handleChange = (index, key, newValue) => {
+    const updatedRows = rows.map((item, i) => {
+      if (i === index) {
+        return { ...item, [key]: newValue };
+      }
+      return item;
+    });
+    setRows(updatedRows);
+  };
+  
+  // useEffect(() => {
+  // }, [])
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        padding: 10,
-        alignItems: 'center',
-      }}>
+    <>
+      <Backdrop
+        sx={{ color: '#fff', zIndex: 99999 }}
+        open={loadingUpload}
+        onClick={() => setLoadingUpload(false)}>
+        <CircularProgress color='inherit' />
+      </Backdrop>
       <Box
         sx={{
-          flex: 1,
           display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
+          flexDirection: 'column',
+          flex: 1,
+          alignItems: 'center',
         }}>
-        <CSVLink
-          data={data}
-          headers={headers}
-          filename={`data-${moment().format('YYYYMMDDHHmmss')}.csv`}
-          separator=';'>
-          <Button variant='contained' color='secondary'>
-            <Typography
-              align='left'
-              sx={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-              Export To CSV
-            </Typography>
-          </Button>
-        </CSVLink>
-        <input
-          type='file'
-          ref={uploadedDoc}
-          hidden
-          onChange={(e) => handleImportCSV(e?.target?.files[0])}
-        />
-        <Button
-          onClick={() => uploadedDoc.current.click()}
-          variant='contained'
-          color='info'
-          sx={{ ml: 1 }}>
-          <Typography
-            align='left'
-            sx={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-            Import CSV To JSON
-          </Typography>
-        </Button>
-        <Button
-          onClick={() => setRows([])}
-          variant='contained'
-          color='info'
-          sx={{ ml: 1 }}>
-          <Typography
-            align='left'
-            sx={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-            Clear Data
-          </Typography>
-        </Button>
+          <Grid container>
+            <Grid item md={6}>
+              <Button style={{margin:30}}
+              variant='contained'
+              component='label'>
+              Upload PDF
+              <input
+                type='file'
+                draggable='true'
+                hidden
+                ref={uploadedDoc}
+                onChange={handleUpload}
+                onClick={(e) => (e.target.value = null)}
+              />
+              </Button>
+              {
+                previewFile ?
+                <iframe
+                  src={url+previewFile}
+                  style={{
+                    width: '100%',
+                    height: 700,
+                    border: 'none',
+                  }}
+                />:
+                <img src={url + "repo/image/no-data.jpg"} 
+                style={{
+                  height: 500,
+                  border: 'none',
+                }}/>
+              }
+            </Grid>
+            <Grid item md={6}>
+              {
+                rows.map((item,i)=>(
+                  <Box sx={{p:1}}>
+                    <Typography sx={{ml:1,mb:1}}>Halaman {i+1}</Typography>
+                    <Grid container>
+                      {Object.entries(item).map(([key, value]) => (
+                          <TextField
+                            id={key}
+                            label={key}
+                            value={value}
+                            sx={{m:1}}
+                            onChange={(e) => handleChange(i, key, e.target.value)}
+                          />
+                        ))}
+                    </Grid>
+                    <Divider sx={{mt:2}}/>
+                  </Box>
+                ))
+              }
+            </Grid>
+          </Grid>
       </Box>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            <TableCell>Nim</TableCell>
-            <TableCell>Jurusan</TableCell>
-            <TableCell>Universitas</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((item) => (
-            <TableRow>
-              <TableCell>{item.name}</TableCell>
-              <TableCell>{item.nim}</TableCell>
-              <TableCell>{item.major}</TableCell>
-              <TableCell>{item.university}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Box>
+      </>
   )
 }
